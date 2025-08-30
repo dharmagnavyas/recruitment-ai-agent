@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruitment AI Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .email-template {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: Arial, sans-serif;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .best-candidate {
+            background-color: #d4edda;
+        }
+
+        #jdPreview {
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .selected-file {
+            padding: 5px 10px;
+            margin: 5px 0;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .selected-file button {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Recruitment AI Agent</h1>
+        
+        <div class="card mb-5">
+            <div class="card-header">
+                <h2>Step 1: Job Description</h2>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="jdTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab">Upload File</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual" type="button" role="tab">Manual Input</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab">Generate JD</button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content mt-3" id="jdTabContent">
+                    <!-- Upload File Tab -->
+                    <div class="tab-pane fade show active" id="upload" role="tabpanel">
+                        <form id="uploadJdForm" class="mb-3">
+                            <div class="mb-3">
+                                <label for="jdFile" class="form-label">Upload Job Description (PDF, DOC, DOCX)</label>
+                                <input class="form-control" type="file" id="jdFile" accept=".pdf,.doc,.docx">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Upload</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Manual Input Tab -->
+                    <div class="tab-pane fade" id="manual" role="tabpanel">
+                        <form id="manualJdForm" class="mb-3">
+                            <div class="mb-3">
+                                <label for="jdText" class="form-label">Enter Job Description</label>
+                                <textarea class="form-control" id="jdText" rows="10" placeholder="Paste or type the job description here..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Generate JD Tab -->
+                    <div class="tab-pane fade" id="generate" role="tabpanel">
+                        <form id="generateJdForm" class="mb-3">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="jobTitle" class="form-label">Job Title</label>
+                                    <input type="text" class="form-control" id="jobTitle" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="yearsExperience" class="form-label">Years of Experience</label>
+                                    <input type="number" class="form-control" id="yearsExperience" min="0" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="skills" class="form-label">Must-have Skills (comma-separated)</label>
+                                <input type="text" class="form-control" id="skills" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="companyName" class="form-label">Company Name</label>
+                                    <input type="text" class="form-control" id="companyName" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="employmentType" class="form-label">Employment Type</label>
+                                    <select class="form-control" id="employmentType" required>
+                                        <option value="Full-time">Full-time</option>
+                                        <option value="Part-time">Part-time</option>
+                                        <option value="Contract">Contract</option>
+                                        <option value="Temporary">Temporary</option>
+                                        <option value="Internship">Internship</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="industry" class="form-label">Industry</label>
+                                    <input type="text" class="form-control" id="industry" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" id="location" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Generate</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div id="jdResult" class="mt-3 d-none">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Job Description Preview</h5>
+                            <button id="editJdBtn" class="btn btn-sm btn-outline-secondary">Edit</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="jdPreview" class="mb-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-5">
+            <div class="card-header">
+                <h2>Step 2: Upload Resumes</h2>
+            </div>
+            <div class="card-body">
+                <form id="uploadResumesForm" class="mb-3">
+                    <div class="mb-3">
+                        <label for="resumeFiles" class="form-label">Upload Resumes (PDF, DOC, DOCX) - Up to 10 files</label>
+                        <input class="form-control" type="file" id="resumeFiles" accept=".pdf,.doc,.docx" multiple>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Selected files: <span id="selectedFileCount">0</span></small>
+                        <div id="selectedFiles" class="mt-2"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" disabled id="evaluateBtn">Evaluate Candidates</button>
+                </form>
+            </div>
+        </div>
+        
+        <div id="resultsContainer" class="card mb-5 d-none">
+            <div class="card-header">
+                <h2>Results</h2>
+            </div>
+            <div class="card-body">
+                <div id="loadingResults" class="text-center my-5">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Analyzing resumes and evaluating candidates...</p>
+                </div>
+                
+                <div id="evaluationResults" class="d-none">
+                    <h3>Candidate Evaluations</h3>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Candidate</th>
+                                    <th>Score</th>
+                                    <th>Missing Skills</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody id="candidatesTable"></tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row mt-5">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h4>Interview Email Template</h4>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="interviewEmail" class="email-template"></pre>
+                                    <button class="btn btn-sm btn-outline-primary mt-2 copy-btn" data-target="interviewEmail">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h4>Rejection Email Template</h4>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="rejectionEmail" class="email-template"></pre>
+                                    <button class="btn btn-sm btn-outline-primary mt-2 copy-btn" data-target="rejectionEmail">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit JD Modal -->
+    <div class="modal fade" id="editJdModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Job Description</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="editJdText" class="form-control" rows="15"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveJdChanges">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Variables to store data
+            let jobDescription = '';
+            let jobTitle = '';
+            let companyName = '';
+            let selectedFiles = [];
+            
+            // Forms
+            const uploadJdForm = document.getElementById('uploadJdForm');
+            const manualJdForm = document.getElementById('manualJdForm');
+            const generateJdForm = document.getElementById('generateJdForm');
+            const uploadResumesForm = document.getElementById('uploadResumesForm');
+            
+            // JD Result elements
+            const jdResult = document.getElementById('jdResult');
+            const jdPreview = document.getElementById('jdPreview');
+            const editJdBtn = document.getElementById('editJdBtn');
+            
+            // Resume upload elements
+            const resumeFilesInput = document.getElementById('resumeFiles');
+            const selectedFileCount = document.getElementById('selectedFileCount');
+            const selectedFilesContainer = document.getElementById('selectedFiles');
+            const evaluateBtn = document.getElementById('evaluateBtn');
+            
+            // Results elements
+            const resultsContainer = document.getElementById('resultsContainer');
+            const loadingResults = document.getElementById('loadingResults');
+            const evaluationResults = document.getElementById('evaluationResults');
+            const candidatesTable = document.getElementById('candidatesTable');
+            const interviewEmail = document.getElementById('interviewEmail');
+            const rejectionEmail = document.getElementById('rejectionEmail');
+            
+            // Edit JD Modal elements
+            const editJdModal = new bootstrap.Modal(document.getElementById('editJdModal'));
+            const editJdText = document.getElementById('editJdText');
+            const saveJdChanges = document.getElementById('saveJdChanges');
+            
+            // Handle JD upload
+            uploadJdForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const fileInput = document.getElementById('jdFile');
+                
+                if (fileInput.files.length === 0) {
+                    alert('Please select a file to upload');
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    const response = await fetch('/upload-jd-file', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    jobDescription = data.job_description;
+                    
+                    // Show JD preview
+                    jdPreview.textContent = jobDescription;
+                    jdResult.classList.remove('d-none');
+                    
+                    // Enable evaluate button if resumes are selected
+                    if (selectedFiles.length > 0) {
+                        evaluateBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Error uploading JD:', error);
+                    alert('Error uploading job description. Please try again.');
+                }
+            });
+            
+            // Handle manual JD input
+            manualJdForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const jdText = document.getElementById('jdText').value;
+                
+                if (!jdText.trim()) {
+                    alert('Please enter a job description');
+                    return;
+                }
+                
+                jobDescription = jdText;
+                
+                // Show JD preview
+                jdPreview.textContent = jobDescription;
+                jdResult.classList.remove('d-none');
+                
+                // Enable evaluate button if resumes are selected
+                if (selectedFiles.length > 0) {
+                    evaluateBtn.disabled = false;
+                }
+            });
+            
+            // Handle JD generation
+            generateJdForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Get form values
+                jobTitle = document.getElementById('jobTitle').value;
+                const yearsExperience = document.getElementById('yearsExperience').value;
+                const skills = document.getElementById('skills').value;
+                companyName = document.getElementById('companyName').value;
+                const employmentType = document.getElementById('employmentType').value;
+                const industry = document.getElementById('industry').value;
+                const location = document.getElementById('location').value;
+                
+                // Create request body
+                const requestBody = {
+                    method: 'generate',
+                    job_title: jobTitle,
+                    years_experience: parseInt(yearsExperience),
+                    skills: skills,
+                    company_name: companyName,
+                    employment_type: employmentType,
+                    industry: industry,
+                    location: location
+                };
+                
+                try {
+                    // Show loading indicator
+                    const generateBtn = generateJdForm.querySelector('button[type="submit"]');
+                    generateBtn.disabled = true;
+                    generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+                    
+                    const response = await fetch('/job-description', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+                    
+                    const data = await response.json();
+                    jobDescription = data.job_description;
+                    
+                    // Show JD preview
+                    jdPreview.textContent = jobDescription;
+                    jdResult.classList.remove('d-none');
+                    
+                    // Enable evaluate button if resumes are selected
+                    if (selectedFiles.length > 0) {
+                        evaluateBtn.disabled = false;
+                    }
+                    
+                    // Reset button
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate';
+                } catch (error) {
+                    console.error('Error generating JD:', error);
+                    alert('Error generating job description. Please try again.');
+                    
+                    // Reset button
+                    const generateBtn = generateJdForm.querySelector('button[type="submit"]');
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate';
+                }
+            });
+            
+            // Handle JD editing
+            editJdBtn.addEventListener('click', function() {
+                editJdText.value = jobDescription;
+                editJdModal.show();
+            });
+            
+            saveJdChanges.addEventListener('click', function() {
+                jobDescription = editJdText.value;
+                jdPreview.textContent = jobDescription;
+                editJdModal.hide();
+            });
+            
+            // Handle resume file selection
+            resumeFilesInput.addEventListener('change', function() {
+                const files = Array.from(resumeFilesInput.files);
+                
+                // Limit to 10 files
+                if (files.length > 10) {
+                    alert('You can upload a maximum of 10 resumes at a time');
+                    resumeFilesInput.value = '';
+                    return;
+                }
+                
+                // Update selected files
+                selectedFiles = files;
+                selectedFileCount.textContent = selectedFiles.length;
+                
+                // Display selected files
+                selectedFilesContainer.innerHTML = '';
+                selectedFiles.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'selected-file';
+                    fileItem.innerHTML = `
+                        <span>${file.name}</span>
+                        <button type="button" data-index="${index}" class="remove-file">&times;</button>
+                    `;
+                    selectedFilesContainer.appendChild(fileItem);
+                });
+                
+                // Enable evaluate button if JD is available
+                if (jobDescription && selectedFiles.length > 0) {
+                    evaluateBtn.disabled = false;
+                } else {
+                    evaluateBtn.disabled = true;
+                }
+            });
+            
+            // Handle remove file button
+            selectedFilesContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-file')) {
+                    const index = parseInt(e.target.dataset.index);
+                    selectedFiles = selectedFiles.filter((_, i) => i !== index);
+                    
+                    // Update UI
+                    selectedFileCount.textContent = selectedFiles.length;
+                    e.target.parentElement.remove();
+                    
+                    // Update remove file buttons indexes
+                    document.querySelectorAll('.remove-file').forEach((btn, i) => {
+                        btn.dataset.index = i;
+                    });
+                    
+                    // Disable evaluate button if no files selected
+                    if (selectedFiles.length === 0) {
+                        evaluateBtn.disabled = true;
+                    }
+                }
+            });
+            
+            // Handle resume evaluation
+            uploadResumesForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (!jobDescription) {
+                    alert('Please provide a job description first');
+                    return;
+                }
+                
+                if (selectedFiles.length === 0) {
+                    alert('Please select at least one resume');
+                    return;
+                }
+                
+                // Get company name and job title if not set (from generate form)
+                if (!companyName) {
+                    companyName = prompt('Please enter the company name:', 'Company Name');
+                    if (!companyName) return;
+                }
+                
+                if (!jobTitle) {
+                    jobTitle = prompt('Please enter the job title:', 'Job Title');
+                    if (!jobTitle) return;
+                }
+                
+                // Show loading
+                resultsContainer.classList.remove('d-none');
+                loadingResults.classList.remove('d-none');
+                evaluationResults.classList.add('d-none');
+                
+                // Scroll to results
+                resultsContainer.scrollIntoView({ behavior: 'smooth' });
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('job_description', jobDescription);
+                formData.append('company_name', companyName);
+                formData.append('job_title', jobTitle);
+                
+                // Add files
+                selectedFiles.forEach(file => {
+                    formData.append('files', file);
+                });
+                
+                try {
+                    const response = await fetch('/evaluate-candidates', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Populate results table
+                    candidatesTable.innerHTML = '';
+                    data.candidates.forEach(candidate => {
+                        const row = document.createElement('tr');
+                        
+                        // Highlight best candidate
+                        if (candidate.filename === data.best_candidate) {
+                            row.classList.add('best-candidate');
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${candidate.filename}</td>
+                            <td>${candidate.score}</td>
+                            <td>${candidate.missing_skills.join(', ') || 'None'}</td>
+                            <td>${candidate.remarks}</td>
+                        `;
+                        
+                        candidatesTable.appendChild(row);
+                    });
+                    
+                    // Populate email templates
+                    interviewEmail.textContent = data.interview_email;
+                    rejectionEmail.textContent = data.rejection_email;
+                    
+                    // Show results
+                    loadingResults.classList.add('d-none');
+                    evaluationResults.classList.remove('d-none');
+                } catch (error) {
+                    console.error('Error evaluating candidates:', error);
+                    alert('Error evaluating candidates. Please try again.');
+                    
+                    // Hide loading
+                    loadingResults.classList.add('d-none');
+                }
+            });
+            
+            // Handle copy button
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const targetId = this.dataset.target;
+                    const text = document.getElementById(targetId).textContent;
+                    
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Change button text temporarily
+                        const originalText = this.textContent;
+                        this.textContent = 'Copied!';
+                        
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                        }, 2000);
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

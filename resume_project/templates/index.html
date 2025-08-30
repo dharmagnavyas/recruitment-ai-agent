@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recruitment AI Agent</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    body{background:linear-gradient(135deg,#1f1c2c,#928dab) fixed;min-height:100vh}
+    .page-wrap{max-width:980px;margin:32px auto}
+    .card{border:none;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.15)}
+    .card-header{border-radius:16px 16px 0 0;font-weight:700}
+    .spinner-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.45);
+      display:none;align-items:center;justify-content:center;z-index:1050
+    }
+    .spinner-box{background:#fff;border-radius:12px;padding:26px 28px;min-width:280px;text-align:center}
+    pre.jd{white-space:pre-wrap;background:#f8f9fa;border:1px solid #e5e7eb;border-radius:10px;padding:12px}
+  </style>
+</head>
+<body>
+<div class="spinner-overlay" id="spinner">
+  <div class="spinner-box">
+    <div class="spinner-border text-primary mb-2" role="status"></div>
+    <div id="spinnerText" class="small text-muted">Working…</div>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <div class="text-center text-white mb-4">
+    <h1 class="fw-bold"><i class="fa-solid fa-user-check me-2"></i>Recruitment AI Agent</h1>
+    <p class="text-white-50 mb-0">Upload or generate a Job Description, then upload resumes to evaluate candidates.</p>
+  </div>
+
+  <!-- Step 1: Job Description -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <i class="fa-solid fa-briefcase me-2"></i>Step 1: Job Description
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Upload JD (PDF/DOC/DOCX)</label>
+          <div class="input-group">
+            <input type="file" id="jdFile" class="form-control" accept=".pdf,.doc,.docx,.txt"/>
+            <button class="btn btn-outline-primary" onclick="uploadJdFile()">
+              <i class="fa-solid fa-file-arrow-up me-1"></i>Extract Text
+            </button>
+          </div>
+          <div class="form-text">This extracts the text and places it into the editor.</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Or Generate JD</label>
+          <div class="row g-2">
+            <div class="col-12">
+              <input id="genTitle" class="form-control" placeholder="Job Title (e.g., AI Engineer)"/>
+            </div>
+            <div class="col-6">
+              <input id="genYOE" class="form-control" placeholder="Years of Experience (e.g., 2-4)"/>
+            </div>
+            <div class="col-6">
+              <input id="genCompany" class="form-control" placeholder="Company Name"/>
+            </div>
+            <div class="col-12">
+              <input id="genSkills" class="form-control" placeholder="Must-have skills (comma separated)"/>
+            </div>
+            <div class="col-6">
+              <input id="genType" class="form-control" placeholder="Employment Type (Full-time)"/>
+            </div>
+            <div class="col-6">
+              <input id="genIndustry" class="form-control" placeholder="Industry (AI)"/>
+            </div>
+            <div class="col-12">
+              <input id="genLocation" class="form-control" placeholder="Location (Remote)"/>
+            </div>
+            <div class="col-12 d-grid">
+              <button class="btn btn-success" onclick="generateJd()">
+                <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Generate JD
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-4"/>
+
+      <label class="form-label fw-semibold">JD Editor</label>
+      <!-- The server can pre-fill this through Jinja: {{ jd_text }} -->
+      <textarea id="jdText" rows="12" class="form-control" placeholder="Paste or generate the Job Description here...">{{ jd_text }}</textarea>
+      <div class="mt-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="clearJd()">
+          <i class="fa-solid fa-eraser me-1"></i>Clear
+        </button>
+        <button class="btn btn-outline-secondary btn-sm ms-2" onclick="copyJd()">
+          <i class="fa-solid fa-copy me-1"></i>Copy
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Resumes -->
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <i class="fa-solid fa-file-circle-plus me-2"></i>Step 2: Upload Resumes
+    </div>
+    <div class="card-body">
+      <label class="form-label fw-semibold">Upload Resumes (PDF, DOC, DOCX) – Up to 10 files</label>
+      <input type="file" id="resumeFiles" class="form-control" accept=".pdf,.doc,.docx,.txt" multiple/>
+      <div class="form-text">Select multiple files. They will be uploaded and evaluated against the JD.</div>
+
+      <div class="d-grid mt-3">
+        <button class="btn btn-primary btn-lg" onclick="evaluateCandidates()">
+          <i class="fa-solid fa-chart-line me-1"></i>Evaluate Candidates
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center text-white-50">
+    <small>Tip: you’ll be navigated to a results page after evaluation.</small>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+  const spinner = document.getElementById('spinner');
+  const spinnerText = document.getElementById('spinnerText');
+  const showSpinner = (msg) => { spinnerText.textContent = msg || 'Working…'; spinner.style.display='flex'; };
+  const hideSpinner = () => { spinner.style.display='none'; };
+
+  function clearJd(){ document.getElementById('jdText').value=''; }
+  function copyJd(){
+    const t=document.getElementById('jdText').value;
+    navigator.clipboard.writeText(t).then(()=>alert('JD copied to clipboard.'));
+  }
+
+  async function uploadJdFile(){
+    const fileInput = document.getElementById('jdFile');
+    const file = fileInput.files?.[0];
+    if(!file){ alert('Please choose a JD file first.'); return; }
+
+    const fd = new FormData();
+    fd.append('file', file);          // FastAPI expects "file" for /upload-jd
+
+    try{
+      showSpinner('Extracting text from JD…');
+      const resp = await fetch('/upload-jd', { method:'POST', body: fd });
+      const data = await resp.json();
+      hideSpinner();
+      if(!resp.ok){ alert('Error: '+(data.detail||JSON.stringify(data))); return; }
+      document.getElementById('jdText').value = data.job_description || '';
+    }catch(e){
+      hideSpinner();
+      alert('Network error: '+e);
+    }
+  }
+
+  async function generateJd(){
+    const payload = {
+      title: document.getElementById('genTitle').value || 'AI Engineer',
+      years_of_experience: document.getElementById('genYOE').value || '2-4',
+      must_have_skills: document.getElementById('genSkills').value || 'Python, FastAPI, ML, LLMs',
+      company: document.getElementById('genCompany').value || 'Your Company',
+      employment_type: document.getElementById('genType').value || 'Full-time',
+      industry: document.getElementById('genIndustry').value || 'AI',
+      location: document.getElementById('genLocation').value || 'Remote'
+    };
+
+    try{
+      showSpinner('Generating Job Description…');
+      const resp = await fetch('/generate-jd', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      hideSpinner();
+      if(!resp.ok){ alert('Error: '+(data.detail||JSON.stringify(data))); return; }
+      document.getElementById('jdText').value = data.job_description || '';
+      window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+    }catch(e){
+      hideSpinner();
+      alert('Network error: '+e);
+    }
+  }
+
+  // ***** IMPORTANT: This calls /process-resumes with the exact field names *****
+  async function evaluateCandidates(){
+    const filesInput = document.getElementById('resumeFiles');
+    const jdTextarea = document.getElementById('jdText');
+    const files = filesInput?.files || [];
+    const jd = (jdTextarea?.value || '').trim();
+
+    if(!jd){ alert('Please provide the Job Description first.'); return; }
+    if(files.length === 0){ alert('Please choose at least one resume.'); return; }
+    if(files.length > 10){ alert('Please select at most 10 files.'); return; }
+
+    const fd = new FormData();
+    for(const f of files){ fd.append('resumes', f); }  // key MUST be 'resumes'
+    fd.append('jd_text', jd);                           // key MUST be 'jd_text'
+
+    try{
+      showSpinner('Analyzing resumes and evaluating candidates…');
+      const resp = await fetch('/process-resumes', { method:'POST', body: fd });
+      const html = await resp.text();
+      hideSpinner();
+      if(!resp.ok){ alert('Error evaluating candidates: ' + html); return; }
+      // Server returns fully-rendered HTML (results.html); replace page with it
+      document.open(); document.write(html); document.close();
+    }catch(e){
+      hideSpinner();
+      alert('Network error: '+e);
+    }
+  }
+</script>
+</body>
+</html>
