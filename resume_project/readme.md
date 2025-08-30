@@ -1,287 +1,286 @@
-# 🤖 Recruitment AI Agent
+---
 
-A comprehensive AI-powered recruitment system built with FastAPI that intelligently matches candidates to job descriptions, generates personalized emails, and provides detailed candidate analysis.
+# 🤖 Recruitment AI Agent (Claude Edition)
+
+A FastAPI web app that lets recruiters **generate or upload a Job Description**, **analyze up to 10 resumes**, compute **match scores (0–100)**, surface **missing skills**, and auto-draft **interview/rejection emails**—now using **Anthropic Claude 3.7 Sonnet** for the AI bits.
+
+---
 
 ## 🌟 Features
 
-- **3 Ways to Input Job Descriptions:**
-  - 📝 AI-powered JD generation from parameters
-  - ✍️ Manual text input
-  - 📄 File upload (PDF, DOC, DOCX)
+* **3 JD input modes**
 
-- **Smart Resume Processing:**
-  - Upload up to 10 resumes simultaneously
-  - Extract text from PDF, DOC, and DOCX files
-  - AI-powered candidate scoring (0-100)
-  - Identify missing skills and qualifications
+  * 🧠 **AI-generated JD** from title, YOE, skills, company, type, industry, location
+  * ✍️ **Manual** paste/edit
+  * 📄 **File upload** (PDF/DOC/DOCX → text extraction)
 
-- **Automated Email Generation:**
-  - Personalized interview invitations for top candidates
-  - Professional rejection emails for other applicants
-  - Ready-to-send email templates
+* **Resume intelligence**
 
-- **Professional Interface:**
-  - Responsive web design
-  - Real-time processing feedback
-  - Visual candidate ranking
-  - Detailed analytics and statistics
+  * Upload **up to 10** resumes (PDF/DOC/DOCX/TXT)
+  * Robust text extraction (PyPDF2 / python-docx)
+  * **Match score** out of 100 + **missing skills** + **remarks**
+  * Best candidate highlighted
 
-## 🔧 Setup Instructions
+* **AI emails**
 
-### Prerequisites
-- Python 3.8 or higher
-- OpenAI API key (optional - fallback methods included)
+  * Personalized **interview invite** for the top match
+  * Polite **rejection emails** for others
+  * Copy/open-in-mail buttons
 
-### Installation
+* **Nice UI**
 
-1. **Clone or download the project files:**
-```bash
-# Create project directory
-mkdir recruitment-ai-agent
-cd recruitment-ai-agent
-```
+  * Bootstrap 5, responsive, progress spinners
+  * Full results page with analytics
 
-2. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-```
+---
 
-3. **Create directory structure:**
-```bash
-mkdir -p models services templates uploads static
-```
+## 🔧 Tech & Models
 
-4. **Set up environment variables (optional):**
-Create a `.env` file in the project root:
-```env
-OPENAI_API_KEY=your-openai-api-key-here
-```
+* **Backend:** FastAPI + Uvicorn
 
-5. **Place all files in their respective directories:**
+* **Templating:** Jinja2 (pages in `templates/`)
+
+* **AI:** **Anthropic Claude 3.7 Sonnet** via `anthropic` SDK
+  Used for:
+
+  1. **JD generation**
+  2. **Interview email**
+  3. **Rejection emails**
+
+* **Matching logic:**
+
+  * If you have a custom `candidate_matcher.py`, it’s used.
+  * Otherwise a **deterministic keyword fallback** computes scores & missing skills—so the app works even without an API key.
+
+**Why Claude 3.7 Sonnet?**
+
+* High quality writing for JDs and emails
+* Strong instruction-following; consistent, business-ready tone
+* Good latency/price balance for interactive apps
+* Easy Python SDK
+
+---
+
+## 📁 Project Structure
+
 ```
 recruitment-ai-agent/
 ├── main.py
 ├── requirements.txt
 ├── README.md
-├── models/
-│   └── schemas.py
-├── services/
-│   ├── ai_service.py
-│   ├── document_processor.py
-│   └── candidate_matcher.py
+├── ai_service.py                 # Claude integration (JD + emails)
+├── candidate_matcher.py          # optional: custom scoring (else fallback)
+├── document_processor.py         # file text extraction helpers
+├── schemas.py                    # (optional) pydantic models
 ├── templates/
-│   ├── index.html
-│   └── results.html
-├── uploads/ (created automatically)
-└── static/ (created automatically)
+│   ├── index.html                # upload/generate JD + upload resumes
+│   └── results.html              # candidate rankings + emails
+└── static/                       # (optional) assets
 ```
 
-## 🚀 How to Run
+> Make sure you only keep **one** `index.html` (the app’s home). Old templates that post to `/evaluate-candidates` should be removed—this app uses **`/process-resumes`** only.
 
-1. **Start the application:**
+---
+
+## 🧩 Requirements & Installation
+
+### Prerequisites
+
+* Python **3.9+** recommended
+
+### Install
+
+```bash
+pip install -r requirements.txt
+```
+
+Your `requirements.txt` should include (at minimum):
+
+```
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+PyPDF2
+python-docx
+anthropic
+```
+
+---
+
+## 🔑 Configuration (Claude)
+
+Set your Anthropic API key as an environment variable:
+
+**macOS/Linux**
+
+```bash
+export ANTHROPIC_API_KEY="your_rotated_key"
+export ANTHROPIC_MODEL="claude-3-7-sonnet-2025-06-06"   # optional: default used if unset
+```
+
+**Windows (PowerShell)**
+
+```powershell
+$env:ANTHROPIC_API_KEY="your_rotated_key"
+$env:ANTHROPIC_MODEL="claude-3-7-sonnet-2025-06-06"
+```
+
+> Do **not** hard-code keys. Never commit them. Rotate any previously exposed keys.
+
+---
+
+## 🚀 Run
+
 ```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-2. **Access the application:**
-Open your browser and navigate to: `http://localhost:8000`
-
-3. **API Documentation:**
-View the interactive API docs at: `http://localhost:8000/docs`
-
-## 🔍 How It Works
-
-### 1. Job Description Processing
-The system accepts job descriptions through three methods:
-
-**AI Generation:** Provide job parameters (title, experience, skills, etc.) and the AI creates a comprehensive job description.
-
-**Manual Input:** Paste or type the job description directly into the textarea.
-
-**File Upload:** Upload PDF, DOC, or DOCX files and extract the text automatically.
-
-### 2. Resume Analysis
-- Upload multiple resume files (PDF, DOC, DOCX)
-- Extract text content using specialized document processors
-- Send resume content and job description to AI for analysis
-
-### 3. Candidate Matching Algorithm
-Each candidate receives:
-- **Score (0-100):** Overall match percentage
-- **Missing Skills:** Specific skills mentioned in JD but not found in resume
-- **Remarks:** AI-generated insights about strengths and gaps
-
-### 4. Email Generation
-- **Best Candidate:** Receives a personalized interview invitation
-- **Other Candidates:** Get respectful rejection emails
-- All emails are professionally formatted and ready to send
-
-## 🧠 AI Model Choice and Implementation
-
-### Primary AI Model: OpenAI GPT-3.5-turbo
-
-**Why GPT-3.5-turbo?**
-- **Cost Effective:** Lower cost per token compared to GPT-4
-- **Fast Response Times:** Suitable for real-time web applications
-- **Strong Language Understanding:** Excellent for resume analysis and email generation
-- **Consistent Output:** Reliable formatting for structured responses
-
-### AI Integration Points:
-
-1. **Job Description Generation:**
-   - Input: Job parameters (title, experience, skills, etc.)
-   - Output: Professional, comprehensive job description
-   - Fallback: Template-based generation if API fails
-
-2. **Resume-JD Matching:**
-   - Input: Resume text + Job description
-   - Processing: Semantic analysis of skills, experience, and requirements
-   - Output: Structured scoring with missing skills and remarks
-
-3. **Email Generation:**
-   - Input: Candidate name + Job details
-   - Output: Personalized interview/rejection emails
-   - Fallback: Template-based emails with candidate personalization
-
-### Fallback Strategy:
-If OpenAI API is unavailable or not configured:
-- **Job Generation:** Uses professional templates with parameter substitution
-- **Resume Matching:** Employs keyword-based matching algorithms
-- **Email Generation:** Uses predefined templates with dynamic content
-
-This ensures the application remains functional even without AI API access.
-
-## 🧪 Example Test Files
-
-### Sample Job Description
-```
-Senior Python Developer
-
-Company: Tech Solutions Inc.
-Location: San Francisco, CA
-Employment Type: Full-time
-Industry: Technology
-
-We are seeking an experienced Senior Python Developer to join our growing team...
-
-Required Skills:
-- Python, Django, Flask
-- PostgreSQL, MongoDB
-- AWS, Docker
-- REST APIs, GraphQL
-- Git, Agile methodologies
-
-Experience: 5+ years in web development
-```
-
-### Sample Resume Content
-Create test resume files (PDF/DOCX) with content like:
-```
-John Smith
-Software Developer
-
-Experience:
-- 4 years Python development
-- Django and Flask frameworks
-- PostgreSQL database management
-- AWS cloud services
-- REST API development
-
-Skills:
-Python, Django, PostgreSQL, AWS, Git, JavaScript, HTML, CSS
-
-Education:
-Bachelor of Computer Science
-```
-
-## 📊 API Endpoints
-
-### Core Endpoints:
-- `GET /` - Home page with job description input
-- `POST /generate-jd` - Generate job description from parameters
-- `POST /upload-jd` - Extract job description from uploaded file
-- `POST /process-resumes` - Analyze resumes against job description
-- `GET /health` - Health check endpoint
-
-### Request/Response Examples:
-
-**Generate JD:**
-```json
-POST /generate-jd
-{
-  "job_title": "Senior Python Developer",
-  "years_experience": "5+",
-  "must_have_skills": "Python,Django,PostgreSQL",
-  "company_name": "Tech Corp",
-  "employment_type": "Full-time",
-  "industry": "Technology",
-  "location": "Remote"
-}
-```
-
-## 🔧 Configuration
-
-### Environment Variables:
-- `OPENAI_API_KEY`: Your OpenAI API key (optional)
-
-### File Limits:
-- Maximum 10 resume files per job
-- Supported formats: PDF, DOC, DOCX
-- File size limit: Based on server configuration
-
-## 🚨 Troubleshooting
-
-### Common Issues:
-
-1. **File Upload Errors:**
-   - Ensure files are in supported formats (PDF, DOC, DOCX)
-   - Check file permissions in uploads directory
-
-2. **AI Processing Errors:**
-   - Verify OpenAI API key is correctly set
-   - Check internet connection for API calls
-   - Fallback methods will activate automatically
-
-3. **Template Not Found:**
-   - Ensure templates directory exists
-   - Verify index.html and results.html are in templates/
-
-4. **Import Errors:**
-   - Run `pip install -r requirements.txt`
-   - Check Python version compatibility (3.8+)
-
-### Development Mode:
-```bash
-uvicorn main:app --reload --log-level debug
-```
-
-## 🔒 Security Considerations
-
-- File uploads are temporarily stored and automatically deleted
-- No permanent storage of sensitive resume data
-- API keys should be stored in environment variables
-- Input validation on all file uploads and form data
-
-## 🎯 Performance Optimization
-
-- Asynchronous processing for AI calls
-- Temporary file cleanup after processing
-- Efficient document text extraction
-- Responsive web interface with loading indicators
-
-## 🔮 Future Enhancements
-
-- **Database Integration:** Store job postings and candidate data
-- **Advanced Analytics:** Detailed reporting and insights
-- **Integration APIs:** Connect with ATS systems
-- **Multi-language Support:** Support for non-English resumes
-- **Batch Processing:** Handle larger volumes of resumes
-- **Video Interview Scheduling:** Automated calendar integration
-
-## 📄 License
-
-This project is provided as an educational example for recruitment AI systems.
+Open: **[http://localhost:8000/](http://localhost:8000/)**
+API docs: **[http://localhost:8000/docs](http://localhost:8000/docs)**
 
 ---
 
-**Built with:** FastAPI, OpenAI GPT, Bootstrap, and modern web technologies for a seamless recruitment experience.
+## 🧭 How to Use (Quick Start)
+
+1. **Open the app** at `http://localhost:8000/` (don’t open HTML files directly from disk).
+2. **Provide a JD**
+
+   * Click **Extract Text** to upload a JD file **or**
+   * Fill the **Generate JD** form → **Generate JD** **or**
+   * Paste/edit in the **JD Editor**.
+3. **Upload resumes** (PDF/DOC/DOCX/TXT) — up to **10** files.
+4. Click **Evaluate Candidates**.
+   You’ll be taken to the **results** page with scores, missing skills, remarks, and emails.
+
+---
+
+## 🔌 API Endpoints
+
+* `GET /` → Render `index.html`
+* `POST /upload-jd` → **form-data**: `file` → returns `{ job_description }`
+* `POST /generate-jd` → **JSON** with JD params → returns `{ job_description }`
+* `POST /process-resumes` → **form-data**:
+
+  * `resumes` (multiple files)
+  * `jd_text` (string)
+    → returns **rendered HTML** (`results.html`)
+
+**Form keys (important):**
+
+| Endpoint           | Field        | Type        |
+| ------------------ | ------------ | ----------- |
+| `/upload-jd`       | `file`       | file        |
+| `/generate-jd`     | JSON payload | object      |
+| `/process-resumes` | `resumes`    | file\[]     |
+| `/process-resumes` | `jd_text`    | string (JD) |
+
+**cURL samples**
+
+```bash
+# Generate JD
+curl -X POST http://localhost:8000/generate-jd \
+  -H "Content-Type: application/json" \
+  -d '{"title":"AI Engineer","years_of_experience":"2-4","must_have_skills":"Python, FastAPI, LLMs","company":"Acme AI","employment_type":"Full-time","industry":"AI","location":"Remote"}'
+```
+
+```bash
+# Upload JD file
+curl -X POST http://localhost:8000/upload-jd \
+  -F "file=@./samples/jd/AI_Engineer.pdf"
+```
+
+```bash
+# Process resumes
+curl -X POST http://localhost:8000/process-resumes \
+  -F "jd_text=$(cat jd.txt)" \
+  -F "resumes=@./samples/resumes/Alice.pdf" \
+  -F "resumes=@./samples/resumes/Bob.docx"
+```
+
+---
+
+## 🧠 AI Logic
+
+* **JD Generation (Claude)**
+  `ai_service.py → generate_job_description(payload)`
+  Produces a concise, structured JD (Overview, Responsibilities, Requirements, Preferred, etc.).
+
+* **Emails (Claude)**
+
+  * `generate_interview_email(name, jd_text)`
+  * `generate_rejection_email(name, jd_text)`
+
+* **Matching**
+
+  * If `candidate_matcher.py` exists with `match_candidates(jd_text, resumes)`, it’s used.
+  * Otherwise, fallback **keyword-based** scoring:
+
+    * Tokenize JD & resume text → overlap ratio → **score(0–100)**
+    * Derive **missing skills** from JD terms not present in resume
+    * Generate simple **remarks** based on score bands
+
+This ensures the app is usable even without an AI key.
+
+---
+
+## 🧪 Samples
+
+Include a small `/samples` folder in your repo:
+
+```
+samples/
+├── jd/
+│   └── AI_Engineer_Job_Description.pdf
+└── resumes/
+    ├── Alice_SWE.pdf
+    ├── Bob_DataEngineer.docx
+    └── Carol_MLE.pdf
+```
+
+---
+
+## 🛠 Troubleshooting
+
+**422 Unprocessable Entity when evaluating**
+
+* You’re likely using an **old template** posting to `/evaluate-candidates`.
+  Use the new UI (it posts to **`/process-resumes`**).
+* Make sure **form keys** are correct: `resumes` (one per file) + `jd_text` (non-empty).
+* In DevTools → **Network**, click the request and confirm form data names/values.
+* Don’t open `templates/index.html` from disk (`file://`). Always use `http://localhost:8000/`.
+
+**JD not appearing after upload**
+
+* Endpoint must be `/upload-jd` with **field name `file`**.
+* See server logs for errors.
+
+**Claude errors**
+
+* Verify `ANTHROPIC_API_KEY` is set and valid.
+* Network must allow outbound HTTPS.
+* The app falls back for matching even if the AI key is missing.
+
+---
+
+## 🔒 Security
+
+* Never commit API keys; use env vars or a `.env` that’s in `.gitignore`.
+* Uploaded files are processed transiently; avoid storing PII in production.
+* Validate and limit file types/size in production.
+
+---
+
+## 🧭 Roadmap
+
+* Optional embeddings for semantic matching
+* ATS/webhook integrations
+* Persistent storage (Postgres)
+* Multi-language support
+* Calendar scheduling links in interview emails
+
+---
+
+**Built with:** FastAPI • Jinja2 • Bootstrap • Anthropic Claude 3.7 Sonnet • PyPDF2 • python-docx
+
+---
