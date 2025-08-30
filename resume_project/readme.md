@@ -1,6 +1,6 @@
 ---
 
-# 🤖 Recruitment AI Agent (Claude Edition)
+# 🤖 Recruitment AI Agent
 
 A FastAPI web app that lets recruiters **generate or upload a Job Description**, **analyze up to 10 resumes**, compute **match scores (0–100)**, surface **missing skills**, and auto-draft **interview/rejection emails**—now using **Anthropic Claude 3.7 Sonnet** for the AI bits.
 
@@ -284,3 +284,4 @@ samples/
 **Built with:** FastAPI • Jinja2 • Bootstrap • Anthropic Claude 3.7 Sonnet • PyPDF2 • python-docx
 
 ---
+
